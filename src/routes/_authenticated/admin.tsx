@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { LayoutGrid, Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
+import { Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 
 import { deleteApp, listAllApps, saveApp, type AppInput, type AppTile } from "@/lib/apps.functions";
 import { createUser, deleteUser, listUsers } from "@/lib/users.functions";
-import { bundledImages, resolveAppImage } from "@/lib/app-images";
+import { appIcons, resolveAppIcon } from "@/lib/app-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,7 +74,7 @@ const emptyApp: AppInput = {
   name: "",
   description: "",
   url: "",
-  image: "",
+  icon: "",
   sortOrder: 0,
   isActive: true,
 };
@@ -156,19 +156,15 @@ function AppRow({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const img = resolveAppImage(app.image);
+  const Icon = resolveAppIcon(app.icon);
   return (
     <TableRow>
       <TableCell>{app.sortOrder}</TableCell>
       <TableCell>
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-14 shrink-0 place-items-center overflow-hidden rounded-md bg-muted">
-            {img ? (
-              <img src={img} alt="" className="h-full w-full object-cover" />
-            ) : (
-              <LayoutGrid className="size-4 text-muted-foreground" />
-            )}
-          </div>
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink text-tide">
+            <Icon className="size-[18px]" strokeWidth={1.75} />
+          </span>
           <div>
             <div className="font-medium">{app.name}</div>
             <div className="text-xs text-muted-foreground">{app.description}</div>
@@ -191,8 +187,7 @@ function AppRow({
   );
 }
 
-const CUSTOM_IMAGE = "__custom__";
-const NO_IMAGE = "__none__";
+const DEFAULT_ICON = "__default__";
 
 function AppDialog({ app, onClose }: { app: AppInput | null; onClose: () => void }) {
   return (
@@ -211,10 +206,6 @@ function AppForm({ initial, onClose }: { initial: AppInput; onClose: () => void 
     ...initial,
     url: initial.url === "#" ? "" : initial.url,
   });
-  const isBundled = form.image in bundledImages;
-  const [imageMode, setImageMode] = useState(
-    !form.image ? NO_IMAGE : isBundled ? form.image : CUSTOM_IMAGE,
-  );
 
   const save = useMutation({
     mutationFn: (data: AppInput) => saveApp({ data }),
@@ -229,7 +220,7 @@ function AppForm({ initial, onClose }: { initial: AppInput; onClose: () => void 
   const set = <K extends keyof AppInput>(key: K, value: AppInput[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  const preview = resolveAppImage(form.image);
+  const PreviewIcon = resolveAppIcon(form.icon);
 
   return (
     <form
@@ -277,44 +268,28 @@ function AppForm({ initial, onClose }: { initial: AppInput; onClose: () => void 
         </p>
       </div>
       <div className="space-y-2">
-        <Label>Image</Label>
-        <Select
-          value={imageMode}
-          onValueChange={(v) => {
-            setImageMode(v);
-            if (v === NO_IMAGE) set("image", "");
-            else if (v !== CUSTOM_IMAGE) set("image", v);
-            else if (form.image in bundledImages) set("image", "");
-          }}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_IMAGE}>No image</SelectItem>
-            {Object.keys(bundledImages).map((key) => (
-              <SelectItem key={key} value={key}>
-                Built-in: {key}
-              </SelectItem>
-            ))}
-            <SelectItem value={CUSTOM_IMAGE}>Image URL…</SelectItem>
-          </SelectContent>
-        </Select>
-        {imageMode === CUSTOM_IMAGE && (
-          <Input
-            type="url"
-            placeholder="https://.../picture.jpg"
-            value={form.image}
-            onChange={(e) => set("image", e.target.value)}
-          />
-        )}
-        {preview && (
-          <img
-            src={preview}
-            alt=""
-            className="mt-2 aspect-[4/3] w-40 rounded-md border object-cover"
-          />
-        )}
+        <Label>Icon</Label>
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-ink text-tide">
+            <PreviewIcon className="size-[18px]" strokeWidth={1.75} />
+          </span>
+          <Select
+            value={form.icon in appIcons ? form.icon : DEFAULT_ICON}
+            onValueChange={(v) => set("icon", v === DEFAULT_ICON ? "" : v)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={DEFAULT_ICON}>Default</SelectItem>
+              {Object.entries(appIcons).map(([key, Icon]) => (
+                <SelectItem key={key} value={key}>
+                  <Icon className="size-4" /> {key}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       <div className="flex items-end gap-6">
         <div className="w-28 space-y-2">
